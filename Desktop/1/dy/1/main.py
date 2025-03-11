@@ -253,26 +253,21 @@ class DouyuMonitor:
         
         return is_live, room_info
     
+    # 修改通知方法，在服务器环境中使用日志代替桌面通知
     def notify(self, title, message):
         """
-        发送桌面通知
+        发送通知
         
         参数:
             title (str): 通知标题
             message (str): 通知内容
         """
         try:
-            notification.notify(
-                title=title,
-                message=message,
-                app_name="斗鱼开播提醒",
-                timeout=10
-            )
-            # 移除表情符号后再记录日志
+            # 在服务器环境中，使用日志代替桌面通知
             log_title = title.replace('🔴', '[直播]').replace('⚪', '[下播]')
-            logging.info(f"发送通知: {log_title} - {message}")
+            logging.info(f"通知: {log_title} - {message}")
             
-            # 同时发送Server酱推送
+            # 发送Server酱推送
             if self.server_chan_key:
                 self.send_server_chan(title, message)
         except Exception as e:
@@ -325,39 +320,18 @@ class DouyuMonitor:
         except Exception as e:
             logging.error(f"打开直播间失败: {e}")
     
+    # 修改自动打开网页的处理方法
     def handle_new_live_rooms(self):
         """处理新开播的房间"""
         if not self.new_live_rooms:
             return
         
-        # 如果只有一个房间开播，直接打开
-        if len(self.new_live_rooms) == 1:
-            room_id, room_info = self.new_live_rooms[0]
-            if self.auto_open:
-                self.open_live_room(room_id)
-            self.new_live_rooms = []
-            return
-        
-        # 如果有多个房间开播，提供选择
-        print("\n多个主播同时开播，请选择要打开的直播间:")
-        for i, (room_id, room_info) in enumerate(self.new_live_rooms, 1):
+        # 在服务器环境中，不提供选择，只记录开播信息
+        for room_id, room_info in self.new_live_rooms:
             room_name = room_info.get('room_name', f'房间{room_id}')
             owner_name = room_info.get('owner_name', f'主播{room_id}')
-            print(f"{i}. {owner_name} - {room_name}")
-        
-        print("0. 不打开任何直播间")
-        
-        try:
-            choice = int(input("请输入数字选择: "))
-            if 1 <= choice <= len(self.new_live_rooms):
-                selected_room_id = self.new_live_rooms[choice-1][0]
-                self.open_live_room(selected_room_id)
-            elif choice != 0:
-                print("无效的选择")
-        except ValueError:
-            print("请输入有效的数字")
-        except Exception as e:
-            logging.error(f"处理选择时出错: {e}")
+            url = f"https://www.douyu.com/{room_id}"
+            logging.info(f"主播 {owner_name} 开播了，房间: {room_name}，直播间链接: {url}")
         
         # 清空新开播列表
         self.new_live_rooms = []
